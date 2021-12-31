@@ -1,0 +1,5 @@
+pdfs/
+*.zip
+*.txt
+*.xml
+.DS_Store
