@@ -1,5 +1,5 @@
 import csv, json, zipfile
-import requests, PyPDF2, fitz
+import requests, fitz
 
 zip_file_url = "https://disclosures-clerk.house.gov/public_disc/financial-pdfs/2021FD.zip"
 pdf_file_url = "https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/2021/"
