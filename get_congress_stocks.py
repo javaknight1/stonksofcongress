@@ -80,11 +80,11 @@ def main():
     for doc in congress_docs:
         res = requests.get(f"{PDF_FILE_URL}{doc['doc_id']}.pdf")
 
-        with open(f"pdfs/{doc['doc_id']}.pdf", 'wb+') as pdf_file:
-            pdf_file.write(res.content)
-            bar.next()
+        if (res.status_code == 200):
+            with open(f"pdfs/{doc['doc_id']}.pdf", 'wb+') as pdf_file:
+                pdf_file.write(res.content)
+                bar.next()
 
-        # if (res.status_code == 200):
         #     doc = fitz.open(f"pdfs/{doc['doc_id']}.pdf")
         #     page = doc.load_page(page_id=0)
 
