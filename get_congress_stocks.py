@@ -3,7 +3,10 @@ import requests
 import os, shutil
 import argparse
 from progress.bar import Bar
+from PyPDF2 import PdfReader
+from openai import OpenAI
 
+OPENAI_API_KEY = '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'
 PDF_FILE_URL = "https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/2021/"
 
 def parseargs():
@@ -68,11 +71,22 @@ def get_congress_people_docs(name, delete_files=True):
 
     return congress_docs
 
+def extract_text_from_pdf(pdf_path):
+    with open(pdf_path, 'rb') as file:
+        pdf_reader = PdfReader(file)
+        text = ""
+        for page_num in range(len(pdf_reader.pages)):
+            page = pdf_reader.pages[page_num]
+            text += page.extract_text()
+    return text
+
 def main():
     args = parseargs()
     congress_docs = get_congress_people_docs("2021FD")
+    pdf_dir = "pdfs"
 
-    os.mkdir("./pdfs")
+    if not os.path.exists(f"{pdf_dir}"):
+        os.mkdir(f"{pdf_dir}")
 
     print(f"Found {len(congress_docs)} PDF records....")
     bar = Bar('Loading PDFs', fill='#', suffix='%(percent).1f%% (%(index)d/%(max)d) - %(eta)ds', max=len(congress_docs))
@@ -81,28 +95,30 @@ def main():
         res = requests.get(f"{PDF_FILE_URL}{doc['doc_id']}.pdf")
 
         if (res.status_code == 200):
-            with open(f"pdfs/{doc['doc_id']}.pdf", 'wb+') as pdf_file:
+            with open(f"{pdf_dir}/{doc['doc_id']}.pdf", 'wb+') as pdf_file:
                 pdf_file.write(res.content)
                 bar.next()
 
-        #     doc = fitz.open(f"pdfs/{doc['doc_id']}.pdf")
-        #     page = doc.load_page(page_id=0)
+            pdf_text = extract_text_from_pdf(f"{pdf_dir}/{doc['doc_id']}.pdf")
 
-        #     json_data = page.get_text("json")
+            client = OpenAI()
 
-        #     if "blocks" in json_data:
-        #         import pdb; pdb.set_trace()
-        #         for block in json_data["blocks"]:
-        #             import pdb; pdb.set_trace()
-        #             if "lines" in block:
-        #                 print(block)
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo-1106",
+                response_format={ "type": "json_object" },
+                messages=[
+                    {"role": "system", "content": f"Extracted from the PDF: {pdf_text}."},
+                    {"role": "user", "content": "Can you get the list of stock trades and export it as a json?"}
+                ]
+            )
+            print(response.choices[0].message.content)
             
     bar.finish()
 
     print("Completed downloading PDFs")
             
-    if False and os.path.isdir("./pdfs"):
-        shutil.rmtree("./pdfs")
+    if False and os.path.exists(f"{pdf_dir}") and os.path.isdir(f"{pdf_dir}"):
+        shutil.rmtree(f"{pdf_dir}")
 
 if __name__ == "__main__":
     main()
